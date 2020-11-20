@@ -53,12 +53,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description='Audio classification example',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument("--model", type=str, default='ResNet50', help="model:model_x")
+parser.add_argument("--model", type=str, default='ModelSimpleConv', help="model:model_x")
 
 parser.add_argument('--log-dir', default='./logs',
                     help='tensorboard log directory')
 
-parser.add_argument('--batch_size', type=int, default=256,
+parser.add_argument('--batch_size', type=int, default=50,
                     help='input batch size for training')
 
 parser.add_argument('--epochs', type=int, default=5,
@@ -76,8 +76,14 @@ parser.add_argument('--padding', type=int, default=2,
 parser.add_argument('--stride', type=int, default=1,
                     help='stride')
 
-parser.add_argument('--classes_amount', type=int, default=4,
+parser.add_argument('--classes_amount', type=int, default=10,
                     help='wtf')
+
+parser.add_argument('--method', type=str, default='mfcc',
+                    help='data imaging method')
+
+parser.add_argument('--dataset_type', type=str, default='mini',
+                    help='data imaging method')
 
 args = parser.parse_args()
 
@@ -86,14 +92,22 @@ args.checkpoint_format = os.path.join(args.log_dir, 'checkpoint-{epoch}.h5')
 
 #%%
 
-train_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/10_class_MI_big_train.csv',
+train_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_mini_dataset.csv',
                                 path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',                                
+                                
                                 train = True)
 
 
 
-test_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/10_class_MI_big_test.csv',
+
+test_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_mini_dataset.csv',
                                 path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
+                                
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',                                           
+
                                 train = False)
 
 
@@ -116,16 +130,16 @@ test_loader = torch.utils.data.DataLoader(test_dataset,
 # train_dataset = fsd_dataset(
 #     csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_4_classes_MI.csv',
 #     path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
-#     # mmap_path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/-=2020=-/graduation_project/ConvNets_audioClassification/memmap_stuff/train/memmaps/',
-#     # json_path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/-=2020=-/graduation_project/ConvNets_audioClassification/memmap_stuff/train/json/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',              
 #     train=True)
 
 
 # test_dataset = fsd_dataset(
 #     csv_file='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_4_classes_MI.csv',
 #     path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
-#     # mmap_path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/-=2020=-/graduation_project/ConvNets_audioClassification/memmap_stuff/test/memmaps/',
-#     # json_path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/-=2020=-/graduation_project/ConvNets_audioClassification/memmap_stuff/test/json/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',              
 #     train=False)
 
 # train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -146,8 +160,6 @@ test_loader = torch.utils.data.DataLoader(test_dataset,
 #%%
 
 #torch.manual_seed(1234)
-
-
 
 Model = getattr(__import__(f'models_4_audio.{args.model}', fromlist=['Model']), 'Model')
 net = Model(args)
@@ -183,8 +195,10 @@ def write_report(var_dict, string):
     
     df = pd.DataFrame(transposed ,index=index, columns=attributes)  
     df = df.drop(columns=['iterationz'],axis=0)
-      
-    df.to_excel(f'output_ver_{todays_date}_{postfix}.xlsx')
+    
+    
+    path = f'D:/DL_research/DL_research/reports_out/{args.method}/{args.dataset_type}/'  
+    df.to_excel(path + f'output_ver_{todays_date}_{postfix}_BS_{args.batch_size}_lr_{args.learning_rate}.xlsx')
     
     
     
@@ -385,7 +399,7 @@ leg = ax1.legend(loc='upper right');
 
 
 
-write_report(var_dict, 'general')
+write_report(var_dict, '_')
 
 
 

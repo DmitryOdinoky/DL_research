@@ -1,0 +1,222 @@
+import pandas as pd
+import sklearn, sklearn.utils
+import torch
+import matplotlib.pyplot as plt
+
+from scipy.io import wavfile
+from python_speech_features import mfcc
+    
+import numpy as np
+# import mmap
+
+from tqdm import tqdm
+
+
+import librosa
+import librosa.display
+import json
+
+import functools
+import operator
+
+import os
+
+
+
+
+            
+            
+class fsd_dataset(object):
+    
+    def __init__(self, csv_file, path, mmap_path, json_path, train = True):
+
+        self.train = train
+      
+        self.dataset_frame = pd.read_csv(csv_file).dropna(axis=0, how='all')
+        
+        #self.dataset_frame = self.dataset_frame.drop(['index','manually_verified','freesound_id','license'], axis=1)
+        #self.dataset_frame = self.dataset_frame.drop(['index'], axis=1)
+      
+        #self.dataset_frame_mod = self.dataset_frame.copy(deep=True)
+        
+        self.labels = self.dataset_frame.label.unique()
+
+        self.all_samples = []
+        
+        self.metadata_array = []
+        self.spectrogram_array = []
+        
+
+      
+        
+        self.path = path
+        self.mmap_path = mmap_path
+        self.json_path = json_path
+
+        #self.time_window = 140
+        
+        self.hop_length = 256
+        self.n_fft = 1103
+
+        self.samplerate = 44100
+
+        self.window_length = 22000
+        self.overlap_length = 6000
+
+        self.n_mels = 26
+        self.n_mfcc = 13
+        
+        self.sample_count = 0
+
+        self.samples = []
+
+        self.y_by_label = {}
+        self.y_counts = {}
+        
+        
+        if not os.listdir(self.mmap_path):
+            
+            print("Directory is empty")
+            
+            for file in tqdm(self.dataset_frame['fname']):
+                
+    
+    
+                # S, sr = librosa.load(self.path + file, sr=self.samplerate, mono=True)
+                #raw = librosa.resample(raw, sr, self.samplerate)
+                rate, S2 = wavfile.read(self.path + file)
+               
+                
+                label = self.dataset_frame.loc[self.dataset_frame.fname == file, 'label'].values[0]
+                
+                
+                
+                # split_points = librosa.effects.split(raw, top_db=80, frame_length=self.n_fft, hop_length=self.hop_length)
+                
+                # S_cleaned = []
+                            
+                # for piece in split_points:
+                 
+                #     S_cleaned.append(raw[piece[0]:piece[1]])
+             
+                # S = np.array(functools.reduce(operator.iconcat, S_cleaned, []))
+               
+                # for i in range(0,1):
+                #     S = np.concatenate((S,S),axis=0)
+                    
+                    
+    
+    
+    
+                for idx in range(0, S2.shape[0]-self.window_length, self.overlap_length):
+                    
+
+                    sample2 = S2[idx : idx+self.window_length]
+
+    
+                    x2 = mfcc(sample2, rate, numcep=self.n_mfcc, nfilt=self.n_mels, nfft = self.n_fft).T                
+                    
+                    
+                    x2 = self.normalize_stuff(x2)
+                
+                    
+                    self.sample_count += len(x2)
+                    
+                          
+    
+                    if label not in self.y_by_label:
+                       
+                        self.y_by_label[label] = len(self.y_by_label)
+    
+                    y = self.y_by_label[label]
+    
+                    if y not in self.y_counts:
+                        self.y_counts[y] = 0
+                    
+                    if self.y_counts[y] < 10000:
+                        
+                        self.samples.append((x2, y))
+                        self.y_counts[y] += 1
+                        
+                    # plt.imshow(x)
+                    # plt.title(str(y))
+                    # plt.show()
+                    
+                    # plt.imshow(x2)
+                    # plt.title(str(y) + '_1')
+                    # plt.show()
+                                
+            print(f'len(self.samples): {len(self.samples)}')
+            print('self.y_counts:')
+            for key, y in self.y_by_label.items():
+                print(f'{key}: {self.y_counts[y]}')
+
+            self.y_weights = torch.zeros((len(self.y_counts.keys()),), dtype=torch.float)
+            for key in self.y_counts.keys():
+                self.y_weights[key] = 1.0 - self.y_counts[key] / len(self.samples)                
+                        
+                        
+
+
+            shape_memmap = (self.sample_count, self.n_mfcc, self.window_length)
+            mmap = np.memmap(mmap_path + 'dataset.mmap', dtype=np.float32, mode='w+', shape=shape_memmap)
+            
+            json_desc = {}
+            json_desc['shape_memmap'] = list(shape_memmap)
+            json_desc['class_idxs'] = []
+            json_desc['class_labels'] = []
+
+            idx_mmap = 0
+            
+            for thing in self.samples:
+                
+
+            
+                mmap[idx_mmap:idx_mmap+len(thing),:,:] = thing
+                idx_mmap += len(thing)
+                
+                class_idx = int(self.dataset_frame.loc[self.dataset_frame['fname'] == thing,'label'].iloc[0])
+                label_name = self.dataset_frame.loc[self.dataset_frame['fname'] == thing,'text_label'].iloc[0]
+                
+                json_desc['class_idxs'] += [class_idx] * len(thing)
+                json_desc['class_labels'] += [label_name] * len(thing)
+                
+            
+            mmap.flush()
+            
+            with open(mmap_path + 'memmap.json', 'w') as fp:
+                json.dump(json_desc, fp)                        
+
+
+
+        
+        
+        
+        
+
+    def normalize_stuff(self, stuff):
+        
+        x_max = stuff.max()
+        x_min = stuff.min()
+        stuff -= x_min
+        stuff /= (x_max - x_min) # 0..1
+        stuff -= 0.5
+        stuff *= 2.0 # -1 .. 1
+        
+        return stuff
+
+
+    def __len__(self):
+        return len(self.samples)
+    
+    def __getitem__(self, idx):
+        x, y = self.samples[idx]
+        return np.expand_dims(x, axis=0).astype(np.float32), y
+
+
+
+
+
+
+
+
