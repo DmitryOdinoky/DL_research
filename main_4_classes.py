@@ -1,12 +1,15 @@
 from __future__ import print_function, division
+import time
 
 from tools import radam
+import tools.tensorboard_utils as tensorboard_utils
 
 import datetime
 
 from torch.utils.data import Dataset, DataLoader
 import torchvision
 from torchvision import transforms, utils
+
 
 # import os
 
@@ -33,6 +36,7 @@ import torchnet as tnt
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 import sklearn.utils
+from sklearn import datasets
 
 import warnings
 
@@ -46,6 +50,9 @@ plt.ion()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+##launch tensorboard via --> tensorboard --logdir=C:/DL_research/DL_research/seq_default
+
+
 
 
 #%%
@@ -58,10 +65,13 @@ parser.add_argument("--model", type=str, default='ModelSimpleConv', help="model:
 parser.add_argument('--log-dir', default='./logs',
                     help='tensorboard log directory')
 
-parser.add_argument('--batch_size', type=int, default=100,
+parser.add_argument('-run_name', default=f'run_{time.time()}', type=str)
+parser.add_argument('-sequence_name', default=f'seq_default', type=str)
+
+parser.add_argument('--batch_size', type=int, default=30,
                     help='input batch size for training')
 
-parser.add_argument('--epochs', type=int, default=5,
+parser.add_argument('--epochs', type=int, default=12,
                     help='number of epochs to train')
 
 parser.add_argument('--learning_rate', type=float, default=1e-4,
@@ -76,13 +86,13 @@ parser.add_argument('--padding', type=int, default=2,
 parser.add_argument('--stride', type=int, default=1,
                     help='stride')
 
-parser.add_argument('--classes_amount', type=int, default=4,
+parser.add_argument('--classes_amount', type=int, default=7,
                     help='wtf')
 
 parser.add_argument('--method', type=str, default='mfcc',
                     help='data imaging method')
 
-parser.add_argument('--dataset_type', type=str, default='4_classes',
+parser.add_argument('--dataset_type', type=str, default='7_classes',
                     help='data imaging method')
 
 args = parser.parse_args()
@@ -90,27 +100,64 @@ args = parser.parse_args()
 # Checkpoints will be written in the log directory.
 args.checkpoint_format = os.path.join(args.log_dir, 'checkpoint-{epoch}.h5')
 
+
+summary_writer = tensorboard_utils.CustomSummaryWriter(
+    logdir=f'{args.sequence_name}/{args.run_name}'
+)
+
+
 #%%
 
-# train_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_mini_dataset.csv',
-#                                 path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
-# #     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
-# #     # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',                                
+train_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_mini_dataset_7_class.csv',
+                                path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',                                
                                 
-#                                 train = True)
+                                train = True)
 
 
 
 
-# test_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_mini_dataset.csv',
-#                                 path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
+test_dataset = fsd_dataset(csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_mini_dataset_7_class.csv',
+                                path = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
                                 
-# #     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
-# #     # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',                                           
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',                                           
 
-#                                 train = False)
+                                train = False)
+#%%
 
 
+train_loader = torch.utils.data.DataLoader(train_dataset,
+                            shuffle=True,
+                            batch_size = args.batch_size)
+
+test_loader = torch.utils.data.DataLoader(test_dataset,
+                            shuffle=False,
+                            batch_size = args.batch_size)
+
+
+
+
+
+#%%
+
+
+
+# train_dataset = fsd_dataset(
+#     csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_4_classes_MI.csv',
+#     path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',              
+#     train=True)
+
+
+# test_dataset = fsd_dataset(
+#     csv_file='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_4_classes_MI.csv',
+#     path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
+#     # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
+#     # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',              
+#     train=False)
 
 # train_loader = torch.utils.data.DataLoader(train_dataset,
 #                             shuffle=True,
@@ -120,35 +167,6 @@ args.checkpoint_format = os.path.join(args.log_dir, 'checkpoint-{epoch}.h5')
 #                             shuffle=False,
 #                             batch_size = args.batch_size)
 
-
-
-
-
-#%%
-
-
-train_dataset = fsd_dataset(
-    csv_file = 'D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/train_4_classes_MI.csv',
-    path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_train/',
-    # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/train/memmaps/',
-    # json_path = 'D:/DL_research/DL_research/memmap_stuff/train/json/',              
-    train=True)
-
-
-test_dataset = fsd_dataset(
-    csv_file='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.meta/test_4_classes_MI.csv',
-    path='D:/Sklad/Jan 19/RTU works/3_k_sem_1/Bakalaura Darbs/-=Python Code=-/DATASETS/FSD/FSDKaggle2018.audio_test/',
-    # mmap_path = 'D:/DL_research/DL_research/memmap_stuff/test/memmaps/',
-    # json_path = 'D:/DL_research/DL_research/memmap_stuff/test/json/',              
-    train=False)
-
-train_loader = torch.utils.data.DataLoader(train_dataset,
-                            shuffle=True,
-                            batch_size = args.batch_size)
-
-test_loader = torch.utils.data.DataLoader(test_dataset,
-                            shuffle=False,
-                            batch_size = args.batch_size)
 
 
 
@@ -200,7 +218,23 @@ def write_report(var_dict, string):
     path = f'D:/DL_research/DL_research/reports_out/{args.method}/'  
     df.to_excel(path + f'output_ver_{todays_date}_{postfix}_BS_{args.batch_size}_lr_{args.learning_rate}.xlsx')
     
+def make_conf_matrix():
+    fig = plt.figure()
+    plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.get_cmap('Greys'))
+    plt.xticks(list(train_dataset.decoded_dict.values()), list(train_dataset.decoded_dict.keys()))
+    plt.yticks(list(train_dataset.decoded_dict.values()), list(train_dataset.decoded_dict.keys()))
+    for x in range(args.classes_amount):
+        for y in range(args.classes_amount):
+            plt.annotate(
+                str(round(100 * conf_matrix[x,y]/np.sum(conf_matrix[x]), 1)), xy=(y, x),
+                horizontalalignment='center',
+                verticalalignment='center',
+                backgroundcolor='white'
+            )
+    plt.xlabel('True')
+    plt.ylabel('Predicted')
     
+    return fig    
     
     
 
@@ -228,11 +262,13 @@ meters = {
             'test_tnt_loss': tnt.meter.AverageValueMeter(),
             #'train_mAPMeter': tnt.meter.mAPMeter(),
             #'test_mAPMeter': tnt.meter.mAPMeter(),
-            'train_confusion': tnt.meter.ConfusionMeter(len(train_dataset.labels)),
-            'test_confusion': tnt.meter.ConfusionMeter(len(train_dataset.labels))
+            # 'train_confusion': tnt.meter.ConfusionMeter(len(train_dataset.labels)),
+            # 'test_confusion': tnt.meter.ConfusionMeter(len(train_dataset.labels))
 
 
             }
+
+conf_matrix = np.zeros((args.classes_amount, args.classes_amount))
 
 
 counter = 0
@@ -276,6 +312,8 @@ for epoch in range(number_of_epochs):
 
         helper = 0
         
+
+        
         for batch in tqdm(loader):
             
             helper += 1
@@ -303,15 +341,18 @@ for epoch in range(number_of_epochs):
             loss = torch.mean(-1*y * torch.log(y_prim) * loader.dataset.y_weights.cuda())
             # loss = torch.mean(-1*y * torch.log(y_prim))
             
-            meters[f'{stage}_tnt_loss'].add(loss.item())
+            # meters[f'{stage}_tnt_loss'].add(loss.item())
             _, predict_y = torch.max(y_prim, 1)
             
             correct = 0
-            total = 0
+            total = 0 
             
             for i in range(len(images)):
-                act_label = torch.argmax(y_prim[i]) # act_label = 1 (index)
-                pred_label = torch.argmax(y[i]) # pred_label = 1 (index)
+                act_label = torch.argmax(y[i]) # act_label = 1 (index)
+                pred_label = torch.argmax(y_prim[i]) # pred_label = 1 (index)
+                
+                # conf_matrix[act_label.data.cpu()[i], pred_label.data.cpu()[idx]] += 1
+
             
                 if(act_label == pred_label):
                     correct += 1
@@ -322,16 +363,25 @@ for epoch in range(number_of_epochs):
 
             f1 = sklearn.metrics.f1_score(train_y.data.cpu(), predict_y.data.cpu(), average='macro')
             
+        
 
             var_dict_epoch['loss_epoch'].append(loss.item())
             var_dict_epoch['accuracy_epoch'].append(accuracy)
             var_dict_epoch['f1_epoch'].append(f1.item())
             var_dict_epoch['iterationz'].append(iter_epoch)
+            
+            y_idx = torch.argmax(y, dim=1).data.cpu().numpy()
+            y_prim_idx = torch.argmax(y_prim, dim=1).data.cpu().numpy()
+            
+            for idx in range(y_idx.shape[0]):
+                conf_matrix[y_idx[idx], y_prim_idx[idx]] += 1
+
 
             if loader == train_loader:
                 loss.backward()
                 optimizer.step()
                 
+                      
 
         print(f"stage: {stage} epoch: {epoch}, Loss: {np.average(var_dict_epoch['loss_epoch'])}, Accuracy: {np.average(var_dict_epoch['accuracy_epoch'])}")
 
@@ -343,6 +393,43 @@ for epoch in range(number_of_epochs):
            
            var_dict[f'{stage}_tnt_loss'].append(meters[f'{stage}_tnt_loss'].value()[0])
            #meters[f'{stage}_mAPMeter'].add(meters[f'{stage}_mAPMeter'].value())
+
+           summary_writer.add_scalar(
+                tag='train_acc',
+                scalar_value=np.average(var_dict_epoch['accuracy_epoch']), 
+                global_step=epoch
+    )
+           
+           summary_writer.add_scalar(
+                tag='train_loss',
+                scalar_value=np.average(var_dict_epoch['loss_epoch']), 
+                global_step=epoch
+    )
+           
+           summary_writer.add_scalar(
+                tag='train_f1',
+                scalar_value=np.average(var_dict_epoch['f1_epoch']), 
+                global_step=epoch
+    )
+
+           
+           summary_writer.add_hparams(
+               hparam_dict=args.__dict__,
+               metric_dict={
+                   
+                   'train_loss': np.average(var_dict_epoch['loss_epoch']),
+                   'train_acc': np.average(var_dict_epoch['accuracy_epoch']),
+                   'train_f1': np.average(var_dict_epoch['f1_epoch'])                   
+                   
+                   },
+               
+               name = args.run_name,
+               global_step=epoch
+            
+               
+               )
+           
+           ##summary_writer.add
              
 
                                        
@@ -354,22 +441,66 @@ for epoch in range(number_of_epochs):
             var_dict[f'{stage}_f1_scores'].append(np.average(var_dict_epoch['f1_epoch']))
  
             var_dict[f'{stage}_tnt_loss'].append(meters[f'{stage}_tnt_loss'].value()[0])
-            #meters[f'{stage}_mAPMeter'].add(meters[f'{stage}_mAPMeter'].value())
+
+            
+            summary_writer.add_scalar(
+                tag='test_acc',
+                scalar_value=np.average(var_dict_epoch['accuracy_epoch']), 
+                global_step=epoch
+            )
+               
+            summary_writer.add_scalar(
+                tag='test_loss',
+                scalar_value=np.average(var_dict_epoch['loss_epoch']), 
+                global_step=epoch
+                )
+            
+            summary_writer.add_scalar(
+                tag='test_f1',
+                scalar_value=np.average(var_dict_epoch['f1_epoch']), 
+                global_step=epoch
+            )
+            
+            summary_writer.add_hparams(
+                hparam_dict=args.__dict__,
+                metric_dict={
+                
+                'test_loss': np.average(var_dict_epoch['loss_epoch']),
+                'test_acc': np.average(var_dict_epoch['accuracy_epoch']),
+                'test_f1': np.average(var_dict_epoch['f1_epoch'])
+                
+                },
+                
+                name = args.run_name,
+                global_step=epoch
+                 
+                
+                )
+            
+            summary_writer.add_figure(
+                tag='conf_matrix',
+                figure=make_conf_matrix(),
+                global_step=epoch
+            )
+            
+            embeddings, classes = datasets.make_blobs(n_samples=1000, n_features=128, centers=3)
+            summary_writer.add_embedding(
+                mat=embeddings,
+                metadata=classes.tolist(),
+                tag='embeddings',
+                global_step=epoch
+            )            
             
             
-        confusion_matrix = meters[f'{stage}_confusion'].value()
-        
+        # confusion_matrix = meters[f'{stage}_confusion'].value()
         #confusion_matrix = confusion_meter.value() 
-        
-        
-        
-        
         #write_report(var_dict_epoch, f'per_epoch_{stage}')
             
         
    
     
     var_dict['iterationz'].append(counter)
+    summary_writer.flush()
     
 
 
@@ -393,14 +524,18 @@ sc6 = ax3.plot(var_dict['iterationz'], var_dict['test_f1_scores'])
 ax1.set_xticks([])
 ax2.set_xticks([])
 
-leg = ax1.legend(loc='upper right');
+leg = ax1.legend(loc='upper right')
 
 
+
+fig = make_conf_matrix() # plot one final, at the end
 
 
 
 write_report(var_dict, '_')
 
+
+summary_writer.close()
 
 
 

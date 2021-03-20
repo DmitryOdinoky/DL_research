@@ -59,15 +59,17 @@ class fsd_dataset(object):
 
         self.samplerate = 44100
 
-        self.window_length = int(self.samplerate/2) # depending on sample length
+        self.window_length = int(self.samplerate/1) # depending on sample length
         self.overlap_length = 5000
 
-        self.n_mels = 26
-        self.n_mfcc = 13
+        self.n_mels = 42
+        self.n_mfcc = 26
         
         self.sample_count = 0
 
         self.samples = []
+        
+        self.decoded_dict = {}
 
         self.y_by_label = {}
         self.y_counts = {}
@@ -149,6 +151,7 @@ class fsd_dataset(object):
                 
                 
                 self.samples.append((x2, y))
+                self.decoded_dict.update(self.y_by_label)
                 self.y_counts[y] += 1
                 
                 # if self.y_counts[y] < 10000:
