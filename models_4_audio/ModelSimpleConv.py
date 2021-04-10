@@ -14,7 +14,7 @@ class Model(nn.Module):
                 out_channels=16,
                 padding=1,
                 stride=1,
-                kernel_size=3
+                kernel_size=args.kernel.size
             ),
 
             torch.nn.ReLU(),
@@ -24,7 +24,7 @@ class Model(nn.Module):
                 out_channels=32,
                 padding=1,
                 stride=1,
-                kernel_size = 3
+                kernel_size = args.kernel.size-2
             ),
 
             torch.nn.ReLU(),
@@ -34,7 +34,7 @@ class Model(nn.Module):
                 out_channels=64,
                 padding=1,
                 stride=1,
-                kernel_size = 3
+                kernel_size = args.kernel.size-2
             ),
             torch.nn.ReLU(),
 
@@ -43,7 +43,7 @@ class Model(nn.Module):
                 out_channels=128,
                 padding=1,
                 stride=1,
-                kernel_size = 3
+                kernel_size = 1
             ),
             torch.nn.ReLU()
         )
