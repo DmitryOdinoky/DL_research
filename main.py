@@ -70,13 +70,13 @@ parser.add_argument('--log-dir', default='./logs',
 parser.add_argument('-run_name', default=f'run_{time.time()}', type=str)
 parser.add_argument('-sequence_name', default='seq_default', type=str)
 
-parser.add_argument('--batch_size', type=int, default=30,
+parser.add_argument('--batch_size', type=int, default=20,
                     help='input batch size for training')
 
 parser.add_argument('--epochs', type=int, default = 10,
                     help='number of epochs to train')
 
-parser.add_argument('--learning_rate', type=float, default=1e-4,
+parser.add_argument('--learning_rate', type=float, default=1e-1,
                     help='learning rate for a single GPU')
 
 parser.add_argument('--kernel_size', type=int, default=6,
@@ -351,8 +351,8 @@ for epoch in range(number_of_epochs):
             total = 0 
             
             for i in range(len(images)):
-                act_label = torch.argmax(y_prim[i]) # act_label = 1 (index)
-                pred_label = torch.argmax(y[i]) # pred_label = 1 (index)
+                act_label = torch.argmax(y[i]) # act_label = 1 (index)
+                pred_label = torch.argmax(y_prim[i]) # pred_label = 1 (index)
                 
                 # conf_matrix[act_label.data.cpu()[i], pred_label.data.cpu()[idx]] += 1
 
