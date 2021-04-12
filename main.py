@@ -16,6 +16,7 @@ from torchvision import transforms, utils
 # from skimage import io, transform
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 import mmap
 
@@ -70,7 +71,7 @@ parser.add_argument('--log-dir', default='./logs',
 parser.add_argument('-run_name', default=f'run_{time.time()}', type=str)
 parser.add_argument('-sequence_name', default='seq_default', type=str)
 
-parser.add_argument('--batch_size', type=int, default=20,
+parser.add_argument('--batch_size', type=int, default=10,
                     help='input batch size for training')
 
 parser.add_argument('--epochs', type=int, default = 10,
@@ -79,7 +80,7 @@ parser.add_argument('--epochs', type=int, default = 10,
 parser.add_argument('--learning_rate', type=float, default=1e-1,
                     help='learning rate for a single GPU')
 
-parser.add_argument('--kernel_size', type=int, default=6,
+parser.add_argument('--kernel_size', type=int, default=3,
                     help='kernel size for convolution')
 
 parser.add_argument('--padding', type=int, default=2,
@@ -128,6 +129,30 @@ test_dataset = fsd_dataset(csv_file = f'C:/DL_research/FSD/FSDKaggle2018.meta/te
                                 train = False)
 
 
+#%%
+
+# def list_splitter(list_to_split, ratio):
+#     elements = len(list_to_split)
+#     middle = int(elements * ratio)
+#     return [list_to_split[:middle], list_to_split[middle:]]
+
+# random.seed(1)
+# train_samples = train_dataset.samples
+# # test_samples = test_dataset.samples
+
+
+# train_samples, test_samples = list_splitter(train_samples, 0.8)
+
+# # test_dataset
+
+
+# random.seed(1)
+# train_dataset.samples = train_samples
+# test_dataset.samples = test_samples
+
+#%%
+
+
 
 train_loader = torch.utils.data.DataLoader(train_dataset,
                             shuffle=True,
@@ -136,7 +161,6 @@ train_loader = torch.utils.data.DataLoader(train_dataset,
 test_loader = torch.utils.data.DataLoader(test_dataset,
                             shuffle=False,
                             batch_size = args.batch_size)
-
 
 
 

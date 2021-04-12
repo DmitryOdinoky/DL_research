@@ -155,18 +155,20 @@ class fsd_dataset(object):
                 self.decoded_dict.update(self.y_by_label)
                 self.y_counts[y] += 1
                 
-                # if self.y_counts[y] < 10000:
+                # if self.y_counts[y] < 300:
                     
                 #     self.samples.append((x2, y))
                 #     self.y_counts[y] += 1
                     
-                # plt.imshow(x)
-                # plt.title(str(y))
-                # plt.show()
-                
-                # plt.imshow(x2)
-                # plt.title(str(y) + '_1')
-                # plt.show()
+                # if ((self.y_counts[y] % 1000) == 0):
+                    
+                #     # plt.imshow(x)
+                #     # plt.title(str(y))
+                #     # plt.show()
+                    
+                #     plt.imshow(x2)
+                #     plt.title(str(y) + '_1')
+                #     plt.show()
                             
         print(f'len(self.samples): {len(self.samples)}')
         print('self.y_counts:')
